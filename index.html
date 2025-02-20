@@ -99,7 +99,7 @@
         }
 
         /* Evidenziazione opzione al passaggio del mouse o quando è selezionata */
-        
+
         .contenitore-opzioni div.selected {
             background: #007bff;
             color: white;
@@ -126,7 +126,7 @@
         <!-- Menu a tendina -->
         <div class="dropdown-menu" id="dropdownMenu">
             <!-- Sezione di ricerca interna -->
-            <div class="dropdown-search-box">
+            <div class="dropdown-search-box" id="dropdownsearchbox">
                 <div class="dropdown-header">Ricerca Opzioni</div>
                 <input type="text" id="dropdownSearch" placeholder="Cerca...">
             </div>
@@ -135,6 +135,15 @@
             <div id="noResults" class="no-options">Nessun risultato trovato</div>
             <!-- Lista delle opzioni -->
             <div class="contenitore-opzioni" id="option-list">
+                <div data-value="Opzione 1">Opzione 1</div>
+                <div data-value="Opzione 2">Opzione 2</div>
+                <div data-value="Opzione 3">Opzione 3</div>
+                <div data-value="Opzione 1">Opzione 1</div>
+                <div data-value="Opzione 2">Opzione 2</div>
+                <div data-value="Opzione 3">Opzione 3</div>
+                <div data-value="Opzione 1">Opzione 1</div>
+                <div data-value="Opzione 2">Opzione 2</div>
+                <div data-value="Opzione 3">Opzione 3</div>
                 <div data-value="Opzione 1">Opzione 1</div>
                 <div data-value="Opzione 2">Opzione 2</div>
                 <div data-value="Opzione 3">Opzione 3</div>
@@ -171,6 +180,7 @@
              * Chiude il dropdown: rimuove la classe "active".
              */
             function closeDropdown() {
+
                 dropdownMenu.classList.remove("active");
             }
 
@@ -178,6 +188,7 @@
              * Alterna lo stato del dropdown (aperto/chiuso).
              */
             function toggleDropdown() {
+
                 if (dropdownMenu.classList.contains("active")) {
                     closeDropdown();
                 } else {
@@ -210,7 +221,7 @@
              *
              * @param {number} direction - 1 per giù, -1 per su.
              */
-            function moveSelection(direction) { 
+            function moveSelection(direction) {
                 // Registra l'interazione via tastiera
                 lastInteraction = "keyboard";
 
@@ -219,7 +230,7 @@
                 if (visibleOptions.length === 0) return;
 
                 // Rimuove la classe "selected" da tutte le opzioni visibili
-                visibleOptions.forEach(option => { 
+                visibleOptions.forEach(option => {
                     option.classList.remove("selected")
                 });
 
@@ -244,6 +255,7 @@
 
             // Selezione di un'opzione con il click (rimette in gioco la selezione via mouse)
             optionsContainer.addEventListener("click", function (event) {
+
                 if (event.target.dataset.value) {
                     dropdownInput.value = event.target.dataset.value;
                     closeDropdown();
@@ -280,7 +292,7 @@
                     lastInteraction = "mouse";
                     let visibleOptions = options.filter(option => option.style.display === "block");
                     // Rimuove la selezione da tutte le opzioni visibili
-                    visibleOptions.forEach(option => { 
+                    visibleOptions.forEach(option => {
                         option.classList.remove("selected")
                     });
 
@@ -291,20 +303,57 @@
             });
 
             // Chiude il menu se si clicca fuori
-            document.addEventListener("click", function (event) {
+            optionsContainer.addEventListener("click", function (event) {
                 if (!dropdownMenu.contains(event.target) && !dropdownButton.contains(event.target)) {
+
                     closeDropdown();
                 }
-            });
+            }); // document - dropdownMenu - optionsContainer
 
+            /* sostituita con SimulaPerditaFocus
             // Gestione del blur sul campo di ricerca per evitare chiusure premature
-            dropdownSearch.addEventListener("blur", function () {
+            dropdownSearch.addEventListener("blur", function (event) {
+                debugger;
                 setTimeout(() => {
                     if (!dropdownMenu.contains(document.activeElement)) {
                         closeDropdown();
                     }
                 }, 200);
-            });
+            }); */
+
+            /*
+            * Simulazione dell'evento "blur" per un elemento non focusable (es. un <div>)
+            *
+            * Questa funzione ascolta i click sull'intero documento e controlla se il click è avvenuto
+            * al di fuori dell'elemento identificato da "dropdownsearchbox". Se il click non è
+            * contenuto all'interno di quell'elemento, viene eseguita l'azione definita (in questo esempio,
+            * viene stampato un messaggio in console) per simulare il comportamento di un blur.
+            *
+            * Questo approccio è utile per replicare la logica di chiusura o di perdita di focus
+            * su elementi che di default non ricevono eventi di focus/blur, come un <div>.
+            *
+            * Possibili utilizzi:
+            * - Chiudere un menu dropdown quando l'utente clicca fuori.
+            * - Nascondere tooltip o suggerimenti non permanenti.
+            *
+            * Personalizza il blocco all'interno dell'if per eseguire l'azione desiderata.
+            */
+            document.addEventListener('click', SimulaPerditaFocus);
+            function SimulaPerditaFocus(e) {
+                const dropdownSearchBox = document.getElementById('dropdownsearchbox');
+                // Se il click avviene fuori dal div, esegui il codice desiderato
+                if (!dropdownSearchBox.contains(e.target)) {
+                    // Azione equivalente al blur, ad esempio:
+                    console.log("Simulazione blur: il div ha perso il focus");
+                    // Inserisci qui il codice da eseguire quando il div 'perde focus'
+                    setTimeout(() => {
+                        if (!dropdownMenu.contains(document.activeElement)) {
+                            closeDropdown();
+                        }
+                    }, 200);
+                }
+
+            }
         });
     </script>
 </body>
