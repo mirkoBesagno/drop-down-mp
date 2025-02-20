@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropdown Insert</title>
+    <style>
+        /* Contenitore principale per il dropdown */
+        .dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* Campo di input principale per mostrare il valore selezionato */
+        .dropdown-input {
+            padding: 8px;
+            width: 200px;
+        }
+
+        /* Bottone per aprire/chiudere il menu */
+        .dropdown-button {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        /* Menu a tendina inizialmente nascosto */
+        .dropdown-menu {
+            display: none;
+            /* Nasconde il menu di default */
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #ccc;
+            width: 100%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            overflow: hidden;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        /* Quando il menu è attivo, lo rendiamo visibile */
+        .dropdown-menu.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Contenitore delle opzioni scrollabile */
+        .contenitore-opzioni {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        /* Box della barra di ricerca all'interno del menu */
+        .dropdown-search-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.2);
+            background: #f7f7f7;
+            margin-bottom: 8px;
+        }
+
+        /* Header della sezione di ricerca */
+        .dropdown-header {
+            padding: 8px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dropdown-header::before {
+            content: '\1F50D';
+            font-size: 16px;
+        }
+
+        /* Stile per l'input di ricerca */
+        .dropdown-menu input {
+            width: calc(100% - 16px);
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            display: block;
+            border-radius: 4px;
+        }
+
+        /* Stile per ciascuna opzione */
+        .dropdown-menu div {
+            padding: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s, transform 0.2s;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Evidenziazione opzione al passaggio del mouse o quando è selezionata */
+        
+        .contenitore-opzioni div.selected {
+            background: #007bff;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        /* Stili per i messaggi "nessuna opzione/risultato" */
+        .no-options,
+        .no-results {
+            padding: 8px;
+            color: #888;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dropdown-container">
+        <!-- Campo che mostra il valore selezionato -->
+        <input type="text" class="dropdown-input" id="dropdownInput">
+        <!-- Bottone per aprire/chiudere il menu -->
+        <button class="dropdown-button" id="dropdownButton">▼</button>
+        <!-- Menu a tendina -->
+        <div class="dropdown-menu" id="dropdownMenu">
+            <!-- Sezione di ricerca interna -->
+            <div class="dropdown-search-box">
+                <div class="dropdown-header">Ricerca Opzioni</div>
+                <input type="text" id="dropdownSearch" placeholder="Cerca...">
+            </div>
+            <!-- Messaggi di fallback -->
+            <div id="noOptions" class="no-options">Nessuna opzione disponibile</div>
+            <div id="noResults" class="no-options">Nessun risultato trovato</div>
+            <!-- Lista delle opzioni -->
+            <div class="contenitore-opzioni" id="option-list">
+                <div data-value="Opzione 1">Opzione 1</div>
+                <div data-value="Opzione 2">Opzione 2</div>
+                <div data-value="Opzione 3">Opzione 3</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Riferimenti agli elementi del DOM
+            const dropdownButton = document.getElementById("dropdownButton");
+            const dropdownMenu = document.getElementById("dropdownMenu");
+            const dropdownInput = document.getElementById("dropdownInput");
+            const dropdownSearch = document.getElementById("dropdownSearch");
+            const optionsContainer = document.getElementById("option-list");
+            const noResults = document.getElementById("noResults");
+            const noOptions = document.getElementById("noOptions");
+
+            // Array delle opzioni e variabili di stato
+            let options = Array.from(optionsContainer.children);
+            let selectedIndex = -1;      // Indice dell'opzione attualmente selezionata
+            let lastInteraction = null;  // "keyboard" o "mouse"
+
+            /**
+             * Apre il dropdown: aggiunge la classe "active" e imposta il focus sulla ricerca.
+             */
+            function openDropdown() {
+                dropdownMenu.classList.add("active");
+                dropdownSearch.focus();
+                filterOptions(""); // Reset del filtro
+            }
+
+            /**
+             * Chiude il dropdown: rimuove la classe "active".
+             */
+            function closeDropdown() {
+                dropdownMenu.classList.remove("active");
+            }
+
+            /**
+             * Alterna lo stato del dropdown (aperto/chiuso).
+             */
+            function toggleDropdown() {
+                if (dropdownMenu.classList.contains("active")) {
+                    closeDropdown();
+                } else {
+                    openDropdown();
+                }
+            }
+
+            /**
+             * Filtra le opzioni in base al testo della ricerca.
+             * Se non trova corrispondenze, mostra un messaggio appropriato.
+             *
+             * @param {string} query - Il testo da cercare.
+             */
+            function filterOptions(query) {
+                let visibleOptions = options.filter(option => {
+                    const match = option.textContent.toLowerCase().includes(query.toLowerCase());
+                    option.style.display = match ? "block" : "none";
+                    return match;
+                });
+
+                noResults.style.display = (visibleOptions.length === 0 && options.length > 0) ? "block" : "none";
+                noOptions.style.display = (options.length === 0) ? "block" : "none";
+
+                selectedIndex = -1; // Reset della selezione al filtraggio
+            }
+
+            /**
+             * Gestisce la navigazione delle opzioni tramite frecce.
+             * Rimuove ogni selezione (sia da tastiera che da mouse) prima di impostare quella nuova.
+             *
+             * @param {number} direction - 1 per giù, -1 per su.
+             */
+            function moveSelection(direction) { 
+                // Registra l'interazione via tastiera
+                lastInteraction = "keyboard";
+
+                // Ottiene le opzioni visibili
+                let visibleOptions = options.filter(option => option.style.display === "block");
+                if (visibleOptions.length === 0) return;
+
+                // Rimuove la classe "selected" da tutte le opzioni visibili
+                visibleOptions.forEach(option => { 
+                    option.classList.remove("selected")
+                });
+
+                // Se non c'è ancora una selezione, inizia da -1 (in modo che, aggiungendo direction, arrivi a 0)
+                if (selectedIndex < 0) selectedIndex = 0;
+
+                // Calcola il nuovo indice in maniera ciclica
+                selectedIndex = (selectedIndex + direction + visibleOptions.length) % visibleOptions.length;
+
+                // Imposta la nuova selezione
+                visibleOptions[selectedIndex].classList.add("selected");
+                visibleOptions[selectedIndex].scrollIntoView({ block: "nearest" });
+            }
+
+            /*** EVENTI ***/
+
+            // Apertura/chiusura del menu al click sul bottone
+            dropdownButton.addEventListener("click", function (e) {
+                e.stopPropagation();
+                toggleDropdown();
+            });
+
+            // Selezione di un'opzione con il click (rimette in gioco la selezione via mouse)
+            optionsContainer.addEventListener("click", function (event) {
+                if (event.target.dataset.value) {
+                    dropdownInput.value = event.target.dataset.value;
+                    closeDropdown();
+                }
+            });
+
+            // Filtraggio delle opzioni mentre si digita
+            dropdownSearch.addEventListener("input", function () {
+                filterOptions(this.value);
+            });
+
+            // Navigazione tramite tastiera nel campo di ricerca
+            dropdownSearch.addEventListener("keydown", function (e) {
+                if (e.key === "ArrowDown") {
+                    moveSelection(1);
+                    e.preventDefault();
+                } else if (e.key === "ArrowUp") {
+                    moveSelection(-1);
+                    e.preventDefault();
+                } else if (e.key === "Enter" && selectedIndex >= 0) {
+                    let visibleOptions = options.filter(option => option.style.display === "block");
+                    let selectedOption = visibleOptions[selectedIndex];
+                    dropdownInput.value = selectedOption.dataset.value;
+                    closeDropdown();
+                } else if (e.key === "Escape") {
+                    closeDropdown();
+                }
+            });
+
+            // Gestione del mouse: se il mouse passa sopra un'opzione, imposta quella come selezionata
+            optionsContainer.addEventListener("mousemove", function (event) {
+                if (event.target.dataset.value) {
+
+                    lastInteraction = "mouse";
+                    let visibleOptions = options.filter(option => option.style.display === "block");
+                    // Rimuove la selezione da tutte le opzioni visibili
+                    visibleOptions.forEach(option => { 
+                        option.classList.remove("selected")
+                    });
+
+                    // Imposta la selezione sull'opzione corrente
+                    event.target.classList.add("selected");
+                    selectedIndex = visibleOptions.indexOf(event.target);
+                }
+            });
+
+            // Chiude il menu se si clicca fuori
+            document.addEventListener("click", function (event) {
+                if (!dropdownMenu.contains(event.target) && !dropdownButton.contains(event.target)) {
+                    closeDropdown();
+                }
+            });
+
+            // Gestione del blur sul campo di ricerca per evitare chiusure premature
+            dropdownSearch.addEventListener("blur", function () {
+                setTimeout(() => {
+                    if (!dropdownMenu.contains(document.activeElement)) {
+                        closeDropdown();
+                    }
+                }, 200);
+            });
+        });
+    </script>
+</body>
+
+</html>
