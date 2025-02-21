@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Navbar con Icona Centrale</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    .navbar {
+      display: flex;
+      align-items: center;
+      background-color: #333;
+      color: white;
+      padding: 10px 20px;
+      position: relative;
+      width: 100%;
+    }
+
+    .icon {
+      font-size: 1.5em;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: absolute;
+      z-index: 1; /* L'icona rimane sopra il menu */
+    }
+
+    .nav-container {
+      display: flex;
+      justify-content: center;
+      position: relative;
+      width: 100%;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 15px;
+      padding: 5px 0;
+      white-space: nowrap;
+      justify-content: center;
+    }
+
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      padding: 5px 10px;
+      transition: background 0.3s;
+    }
+
+    .nav-links a:hover {
+      background-color: #555;
+    }
+
+    .left { 
+      left: 20px;
+    }
+
+    .right { 
+      right: 20px;
+    }
+
+    .center {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* Menu separato a sinistra e a destra */
+    .split-menu {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      align-items: center;
+      position: relative;
+      padding: 0 10%;
+    }
+
+    .left-links {
+      display: flex;
+      gap: 15px;
+    }
+
+    .right-links {
+      display: flex;
+      gap: 15px;
+    }
+
+    /* Quando l'icona è a sinistra o a destra, il menu si allinea a sinistra o a destra */
+    .nav-container.left .nav-links {
+      justify-content: flex-start;
+    }
+
+    .nav-container.right .nav-links {
+      justify-content: flex-end;
+    }
+
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div id="icon" class="icon">🔵</div>
+    <div id="nav-container" class="nav-container">
+      <div id="nav-links" class="nav-links"></div>
+    </div>
+  </nav>
+
+  <script>
+    // Configurazione dell'icona
+    const iconPosition = "center"; // Opzioni: "left", "center", "right"
+
+    // Voci del menu principale
+    const menuItems = [
+      "Home", "Servizi", "Prodotti", "Contatti", "Chi Siamo", 
+      "Blog", "Portfolio", "Testimonianze", "Offerte", "Lavora con noi"
+    ];
+
+    const navLinks = document.getElementById("nav-links");
+    const icon = document.getElementById("icon");
+    const navContainer = document.getElementById("nav-container");
+
+    // Popola il menu principale
+    menuItems.forEach(item => {
+      let link = document.createElement("a");
+      link.href = "#";
+      link.textContent = item;
+      navLinks.appendChild(link);
+    });
+
+    // Configura la posizione dell'icona e la struttura del menu
+    if (iconPosition === "center") {
+      // Se l'icona è al centro, dividiamo il menu in due blocchi
+      const leftLinks = document.createElement("div");
+      leftLinks.classList.add("left-links");
+      const rightLinks = document.createElement("div");
+      rightLinks.classList.add("right-links");
+
+      // Aggiungi le voci del menu a sinistra e a destra
+      const middleIndex = Math.floor(menuItems.length / 2);
+      menuItems.slice(0, middleIndex).forEach(item => {
+        let link = document.createElement("a");
+        link.href = "#";
+        link.textContent = item;
+        leftLinks.appendChild(link);
+      });
+
+      menuItems.slice(middleIndex).forEach(item => {
+        let link = document.createElement("a");
+        link.href = "#";
+        link.textContent = item;
+        rightLinks.appendChild(link);
+      });
+
+      // Aggiungi i blocchi sinistro e destro al menu
+      navLinks.innerHTML = '';
+      const splitMenu = document.createElement("div");
+      splitMenu.classList.add("split-menu");
+      splitMenu.appendChild(leftLinks);
+      splitMenu.appendChild(rightLinks);
+      navLinks.appendChild(splitMenu);
+
+    } else if (iconPosition === "left") {
+      // Se l'icona è a sinistra, sposta il menu a destra
+      navContainer.classList.add("left");
+    } else if (iconPosition === "right") {
+      // Se l'icona è a destra, sposta il menu a sinistra
+      navContainer.classList.add("right");
+    }
+
+    // Posizionamento dell'icona
+    icon.classList.add(iconPosition);
+
+  </script>
+
+</body>
+</html>
