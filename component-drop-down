@@ -1,0 +1,277 @@
+<script>
+    class CustomDropdown extends HTMLElement {
+  constructor() {
+    super();
+    // Attacco dello Shadow DOM
+    this.attachShadow({ mode: "open" });
+    this.shadowRoot.innerHTML = `
+      <style>
+        /* Contenitore principale per il dropdown */
+        .dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+        /* Campo di input principale per mostrare il valore selezionato */
+        .dropdown-input {
+            padding: 8px;
+            width: 200px;
+        }
+        /* Bottone per aprire/chiudere il menu */
+        .dropdown-button {
+            padding: 8px;
+            cursor: pointer;
+        }
+        /* Menu a tendina inizialmente nascosto */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #ccc;
+            width: 100%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            overflow: hidden;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        /* Quando il menu è attivo, lo rendiamo visibile */
+        .dropdown-menu.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        /* Contenitore delle opzioni scrollabile */
+        .contenitore-opzioni {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        /* Box della barra di ricerca all'interno del menu */
+        .dropdown-search-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.2);
+            background: #f7f7f7;
+            margin-bottom: 8px;
+        }
+        /* Header della sezione di ricerca */
+        .dropdown-header {
+            padding: 8px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dropdown-header::before {
+            content: '\\1F50D';
+            font-size: 16px;
+        }
+        /* Stile per l'input di ricerca */
+        .dropdown-menu input {
+            width: calc(100% - 16px);
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            display: block;
+            border-radius: 4px;
+        }
+        /* Stile per ciascuna opzione */
+        .dropdown-menu div {
+            padding: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s, transform 0.2s;
+            border-bottom: 1px solid #eee;
+        }
+        /* Evidenziazione opzione al passaggio del mouse o quando è selezionata */
+        .contenitore-opzioni div.selected {
+            background: #007bff;
+            color: white;
+            transform: scale(1.05);
+        }
+        /* Stili per i messaggi "nessuna opzione/risultato" */
+        .no-options,
+        .no-results {
+            padding: 8px;
+            color: #888;
+            text-align: center;
+            display: none;
+        }
+      </style>
+      <div class="dropdown-container">
+        <!-- Campo che mostra il valore selezionato -->
+        <input type="text" class="dropdown-input" id="dropdownInput">
+        <!-- Bottone per aprire/chiudere il menu -->
+        <button class="dropdown-button" id="dropdownButton">▼</button>
+        <!-- Menu a tendina -->
+        <div class="dropdown-menu" id="dropdownMenu">
+          <!-- Sezione di ricerca interna -->
+          <div class="dropdown-search-box" id="dropdownsearchbox">
+            <div class="dropdown-header">Ricerca Opzioni</div>
+            <input type="text" id="dropdownSearch" placeholder="Cerca...">
+          </div>
+          <!-- Messaggi di fallback -->
+          <div id="noOptions" class="no-options">Nessuna opzione disponibile</div>
+          <div id="noResults" class="no-options">Nessun risultato trovato</div>
+          <!-- Lista delle opzioni -->
+          <div class="contenitore-opzioni" id="option-list">
+            <div data-value="Opzione 1">Opzione 1</div>
+            <div data-value="Opzione 2">Opzione 2</div>
+            <div data-value="Opzione 3">Opzione 3</div>
+            <div data-value="Opzione 1">Opzione 1</div>
+            <div data-value="Opzione 2">Opzione 2</div>
+            <div data-value="Opzione 3">Opzione 3</div>
+            <div data-value="Opzione 1">Opzione 1</div>
+            <div data-value="Opzione 2">Opzione 2</div>
+            <div data-value="Opzione 3">Opzione 3</div>
+            <div data-value="Opzione 1">Opzione 1</div>
+            <div data-value="Opzione 2">Opzione 2</div>
+            <div data-value="Opzione 3">Opzione 3</div>
+          </div>
+        </div>
+      </div>
+    `;
+    // Stato iniziale
+    this.selectedIndex = -1;
+    this.lastInteraction = null;
+    // Bind della funzione per mantenere il contesto corretto
+    this.simulaPerditaFocus = this.simulaPerditaFocus.bind(this);
+  }
+
+  connectedCallback() {
+    // Riferimenti agli elementi interni (usando lo Shadow DOM)
+    this.dropdownInput = this.shadowRoot.getElementById("dropdownInput");
+    this.dropdownButton = this.shadowRoot.getElementById("dropdownButton");
+    this.dropdownMenu = this.shadowRoot.getElementById("dropdownMenu");
+    this.dropdownSearch = this.shadowRoot.getElementById("dropdownSearch");
+    this.optionsContainer = this.shadowRoot.getElementById("option-list");
+    this.noOptions = this.shadowRoot.getElementById("noOptions");
+    this.noResults = this.shadowRoot.getElementById("noResults");
+    this.dropdownSearchBox = this.shadowRoot.getElementById("dropdownsearchbox");
+
+    // Array delle opzioni (gli elementi <div> all'interno della lista)
+    this.options = Array.from(this.optionsContainer.children);
+
+    /*** EVENT LISTENERS ***/
+    // Apertura/chiusura del dropdown tramite bottone
+    this.dropdownButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.toggleDropdown();
+    });
+
+    // Selezione dell'opzione tramite click
+    this.optionsContainer.addEventListener("click", (event) => {
+      if (event.target.dataset.value) {
+        this.dropdownInput.value = event.target.dataset.value;
+        this.closeDropdown();
+      }
+    });
+
+    // Filtraggio delle opzioni in base alla ricerca
+    this.dropdownSearch.addEventListener("input", () => {
+      this.filterOptions(this.dropdownSearch.value);
+    });
+
+    // Navigazione tramite tastiera
+    this.dropdownSearch.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") {
+        this.moveSelection(1);
+        e.preventDefault();
+      } else if (e.key === "ArrowUp") {
+        this.moveSelection(-1);
+        e.preventDefault();
+      } else if (e.key === "Enter" && this.selectedIndex >= 0) {
+        let visibleOptions = this.options.filter(option => option.style.display === "block");
+        let selectedOption = visibleOptions[this.selectedIndex];
+        this.dropdownInput.value = selectedOption.dataset.value;
+        this.closeDropdown();
+      } else if (e.key === "Escape") {
+        this.closeDropdown();
+      }
+    });
+
+    // Evidenziazione dell'opzione puntata dal mouse
+    this.optionsContainer.addEventListener("mousemove", (event) => {
+      if (event.target.dataset.value) {
+        this.lastInteraction = "mouse";
+        let visibleOptions = this.options.filter(option => option.style.display === "block");
+        visibleOptions.forEach(option => option.classList.remove("selected"));
+        event.target.classList.add("selected");
+        this.selectedIndex = visibleOptions.indexOf(event.target);
+      }
+    });
+
+    // Simulazione del blur quando si clicca fuori dal componente
+    document.addEventListener("click", this.simulaPerditaFocus);
+  }
+
+  disconnectedCallback() {
+    // Rimozione dell'evento sul document per evitare memory leak
+    document.removeEventListener("click", this.simulaPerditaFocus);
+  }
+
+  openDropdown() {
+    this.dropdownMenu.classList.add("active");
+    this.dropdownSearch.focus();
+    this.filterOptions(""); // Reset del filtro: mostra tutte le opzioni
+  }
+
+  closeDropdown() {
+    this.dropdownMenu.classList.remove("active");
+  }
+
+  toggleDropdown() {
+    if (this.dropdownMenu.classList.contains("active")) {
+      this.closeDropdown();
+    } else {
+      this.openDropdown();
+    }
+  }
+
+  filterOptions(query) {
+    let visibleOptions = this.options.filter(option => {
+      const match = option.textContent.toLowerCase().includes(query.toLowerCase());
+      option.style.display = match ? "block" : "none";
+      return match;
+    });
+    this.noResults.style.display = (visibleOptions.length === 0 && this.options.length > 0) ? "block" : "none";
+    this.noOptions.style.display = (this.options.length === 0) ? "block" : "none";
+    this.selectedIndex = -1;
+  }
+
+  moveSelection(direction) {
+    this.lastInteraction = "keyboard";
+    let visibleOptions = this.options.filter(option => option.style.display === "block");
+    if (visibleOptions.length === 0) return;
+    visibleOptions.forEach(option => option.classList.remove("selected"));
+    if (this.selectedIndex < 0) this.selectedIndex = 0;
+    this.selectedIndex = (this.selectedIndex + direction + visibleOptions.length) % visibleOptions.length;
+    visibleOptions[this.selectedIndex].classList.add("selected");
+    visibleOptions[this.selectedIndex].scrollIntoView({ block: "nearest" });
+  }
+
+  // Ora controlla se il click è all'interno dell'intero componente, non solo della search box.
+  simulaPerditaFocus(e) {
+    // Se il percorso composto dell'evento non include questo custom element, allora chiudiamo il dropdown.
+    if (!e.composedPath().includes(this)) {
+      setTimeout(() => {
+        if (!this.dropdownMenu.contains(document.activeElement)) {
+          this.closeDropdown();
+        }
+      }, 200);
+    }
+  }
+}
+
+customElements.define("custom-dropdown", CustomDropdown);
+
+
+</script>
+
+
+
+
+<custom-dropdown></custom-dropdown>
